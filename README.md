@@ -1,66 +1,388 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+## Step 1
+```bash
+composer global require laravel/installer
+laravel new example-app
+```
+## step 2
+```bash
+cd example-app
+ 
+php artisan serve
+```
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+## DB configuration 
 
-## About Laravel
+```bash
+php artisan migrate
+```
+## make controller for API
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+```bash
+php artisan make:controller Api\UserController --resource
+```
+## change the fillable from user.php
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## create a folder in http as Helper in this create a helper.php for output
+```bash
+composer dump-autoload
+```
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## create api 
+![image](https://github.com/mrpankajpandey/Laravel-API/assets/107976020/728011f1-52be-41df-9a4a-6bf4ca5b1492)
 
-## Learning Laravel
+```php
+<?php
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\UserController;
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+/*
+|--------------------------------------------------------------------------
+| API Routes
+|--------------------------------------------------------------------------
+|
+| Here is where you can register API routes for your application. These
+| routes are loaded by the RouteServiceProvider within a group which
+| is assigned the "api" middleware group. Enjoy building your API!
+|
+*/
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains over 2000 video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+// Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
+//     return $request->user();
+// });
+Route::post('user/store','App\Http\Controllers\Api\UserController@store');
+Route::get('user/get/{flag}',[UserController::class,'index']);
+Route::get('user/{id}',[UserController::class , 'show']);
+Route::delete('user/delete/{id}',[UserController::class,'destroy']);
+Route::put('user/update/{id}',[UserController::class,'update']);
+Route::patch('user/change-password/{id}',[UserController::class,'changePassword']);
+```
 
-## Laravel Sponsors
+## http folder API/UserController.php
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the Laravel [Patreon page](https://patreon.com/taylorotwell).
+```php
+<?php
 
-### Premium Partners
+namespace App\Http\Controllers\Api;
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use App\Models\User;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Cubet Techno Labs](https://cubettech.com)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[Many](https://www.many.co.uk)**
-- **[Webdock, Fast VPS Hosting](https://www.webdock.io/en)**
-- **[DevSquad](https://devsquad.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[OP.GG](https://op.gg)**
-- **[WebReinvent](https://webreinvent.com/?utm_source=laravel&utm_medium=github&utm_campaign=patreon-sponsors)**
-- **[Lendio](https://lendio.com)**
+class UserController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function index($flag)
+    {
+        //flag == 1 active users
+        // flag == 0 all uesr's
+        // p("get Api is working");
+        // $users = User::select('name', 'email')->where('status',1)->get();
+        
+        $query = User::select('name','email');
+        if($flag == 1){
+            $query->where('status',1);
+        }
+        else if($flag ==0){
+            // $query->where('status',0);
+        }
+        else{
+            return  response()->json([
+            'message'=>'Invalid params , It can be either 1 or 0',
+            'status'=>0
+           ],400);
+        }
+        $users = $query->get();
+       if(count($users) >0){
+        $response = [
+            'message' =>count($users) .'user Found',
+            'status' =>1,
+            'data'=>$users
+        ];
+        return response()->json($response,200);
+       }else {
+        
+           $response =[
+               'message' => count($users). ' users not found',
+               'status' =>0,
+           
+           ];
+    }
+    return response()->json($response, 200);
+    }
 
-## Contributing
+    /**
+     * Show the form for creating a new resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function create()
+    {
+        //
+    }
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+    /**
+     * Store a newly created resource in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function store(Request $request)
+    {
+        //
+        $validator =  Validator::make($request->all(), [
+            'name'=>['required'],
+            'email'=>['required', 'email', 'unique:users,email'],
+            'password' => ['required', 'min:8', 'confirmed'],
+            'password_confirmation' =>['required'] 
+        ]);
+        if ($validator->fails()) {
+            return response()->json($validator->messages(),400);
+        }else {
+            $data = [
+                'name'=>$request->name,
+                'email'=>$request->email,
+                'password'=>Hash::make($request->password)
+            ];
+            p($data);
+            DB::beginTransaction();
+            try {
+                //code...
+                $user = User::create($data);
+                DB::commit();
+            } catch (\Exception $e) {
+                //throw $th;
+                DB::rollBack();
+                p($e->getMessage());
+                $user = null;
+            }
+            if ($user != null) {
+                return response()->json([
+                    'message' =>'User Created Successfully'
+                ],200);
+            }else {
+                return response()->json([
+                    'message' =>'Internal server error'
+                ],500);
+            }
+        }
+    
+    }
 
-## Code of Conduct
+    /**
+     * Display the specified resource.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function show($id)
+    {
+        //
+        $user = User::find($id);
+        if (is_null($user)) {
+            # code...
+            $response = [
+                'message' =>'User Not Found ',
+                'status' =>0
+            ];
+        }else{
+            $response = [
+                'message' =>'User Found Successfully ',
+                'status' =>1,
+                'data' => $user
+            ];
+        }
+        return response()->json($response,200);
+    }
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+    /**
+     * Show the form for editing the specified resource.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function edit($id)
+    {
+        //
+    }
 
-## Security Vulnerabilities
+    /**
+     * Update the specified resource in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function update(Request $request, $id)
+    {
+        //
+        $user = User::find($id);
+        if(is_null($user)){
+            $response = [
+                'message' =>"User dosn't exits",
+                'status' =>0
+            ];
+            $respCode = 404;
+        }else{
+            DB::beginTransaction();
+            try {
+                //code...
+                $user->name = $request['name'];
+                $user->email = $request['email'];
+                $user->save();
+                DB::commit();
+                
+                
+            } catch (\Throwable $th) {
+                //throw $th;
+                DB::rollBack();
+                $user =null;  
+            }
+            if(is_null($user)){
+                $response = [
+                    'message' =>"Internal server error",
+                    'status' =>0,
+                    'Error_msg' =>$th->getMessage()
+                ];
+                $respCode = 500 ;
+            }else{
+                $response = [
+                    'message' =>"Data updated Sucessfully",
+                    'status' =>1
+                ];
+                $respCode = 200;
+            }
+        }
+        return response()->json($response,$respCode);
+    
+    }
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+    /**
+     * Remove the specified resource from storage.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function destroy($id)
+    {
+        //
+        $user = User::find($id);
+        if(is_null($user)){
+            $response = [
+                'message' => "User doesn't exits",
+                'status' =>0
+                
+            ];
+            $respCode = 404;
+        }else{
+            DB::beginTransaction();
+            try {
+                $user->delete();
+                DB::commit();
+                $response = [
+                    ',message' =>"User Deleted successfully",
+                    'status' =>1
+                ];
+                //code...
+                $respCode = 200;
+                
+            } catch (\Exception $e) {
+                //throw $th;
+                DB::rollBack();
+                $response = [
+                    ',message' =>"Interal Server Error",
+                    'status' =>0
+                ];
+                //code...
+                $respCode = 500;
+                
+            }
+        }
+        return response()->json($response,$respCode);
+    }
+    public function changePassword(Request $request,$id){
+        $user = User::find($id);
+        if (is_null($user)) {
+            $response = [
+                'message' => "user not found",
+                'status' =>0
+            ];
+            $respCode = 404;
+            # code...
+        }else {
+            if(Hash::check($request['old_password'], $user->password)){
+                if($request['new_password'] == $request['confirm_password']){
+                    DB::beginTransaction();
+                    try {
+                        //code...
+                        $user->password =  Hash::make($request['new_password']);
+                        $user->save();
+                        DB::commit();
+                        
+                        
+                    } catch (\Throwable $th) {
+                        //throw $th;
+                        $user->null;
+                        DB::rollBack();
+                       
+                    }
+                    if(is_null($user)){
+                        $response = [
+                            'message' =>"Internal server error",
+                            'status' =>0,
+                            'error_msg' =>$th->getMessage()
+                        ];
+                        $respCode = 500;
+                        
+                    }else{
+                        $response = [
+                            'message' =>"Password Changed Sucessfully",
+                            'status' =>1
+                        ];
+                        $respCode = 200;
+                    }
+                    
+                }else{
+                    $response = [
+                        'message' =>"New Passaword and Confirm password Not matched",
+                        'status' =>0
+                    ];
+                    $respCode = 404;
+                }
+                
+            }else{
+                $response = [
+                    'message' =>"old Passaword Not matched",
+                    'status' =>0
+                ];
+                $respCode = 404;
+            }
+        }
+        return response()->json($response,$respCode);
+    
+    }
+    
+}
+```
+## Passport Athentication 
+```bash
+php artisan passport:insatll
+```
+[link](https://laravel.com/docs/11.x/passport)
+## Register
+![image](https://github.com/mrpankajpandey/Laravel-API/assets/107976020/32335569-8a95-46db-a943-82d79643ddbe)
+## login
+![image](https://github.com/mrpankajpandey/Laravel-API/assets/107976020/f0c56ee7-a3c6-461c-8675-17d65af2177a)
+## Athentication in API routes 
+![image](https://github.com/mrpankajpandey/Laravel-API/assets/107976020/a55ad6ce-4193-4419-a2e6-8b0523d4c9fd)
+## Athorizationn
+![image](https://github.com/mrpankajpandey/Laravel-API/assets/107976020/4c5e750a-0244-4b2a-afba-8f985a4ba84e)
 
-## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
